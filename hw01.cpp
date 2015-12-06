@@ -21,7 +21,7 @@ SCENEid sID;                    // the 3D scene
 OBJECTid cID, tID;              // the main camera and the terrain for terrain following
 CHARACTERid actorID, donzoID, robberID;            // the major character
 ACTIONid idleID, runID, curPoseID, walkID, idle2ID, run2ID,
-curPose2ID, walk2ID, idle3ID, run3ID, curPose3ID, walk3ID, DieID, Die2ID, Die3ID, AttactID;
+curPose2ID, walk2ID, idle3ID, run3ID, curPose3ID, walk3ID, DieID, Die2ID, Die3ID, AttactID, DamageLID, DamageID;
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
@@ -140,15 +140,18 @@ void FyMain(int argc, char **argv)
 	run2ID = donzo.GetBodyAction(NULL, "Run");
 	walk2ID = donzo.GetBodyAction(NULL, "Walk");
 	Die2ID = donzo.GetBodyAction(NULL, "Die");
+	DamageLID = donzo.GetBodyAction(NULL, "DamageL");
+
 	idle3ID = robber.GetBodyAction(NULL, "Idle");
 	run3ID = robber.GetBodyAction(NULL, "Run");
 	walk3ID = robber.GetBodyAction(NULL, "Walk");
 	Die3ID = robber.GetBodyAction(NULL, "Die");
+	DamageID = robber.GetBodyAction(NULL, "Damage1");
 
 	// set the character to idle action
 	curPoseID = idleID;
 	curPose2ID = idle2ID;
-	curPose3ID = idle3ID;
+	curPose3ID = Die3ID;
 	actor.SetCurrentAction(NULL, 0, curPoseID);
 	actor.Play(START, 0.0f, FALSE, TRUE);
 	actor.TurnRight(90.0f);
@@ -663,6 +666,7 @@ void Movement2(BYTE code, BOOL4 value)
 	}
 }
 
+
 void Attact(BYTE code, BOOL4 value)
 {
 	FnCharacter actor, donzo, robber;
@@ -678,29 +682,60 @@ void Attact(BYTE code, BOOL4 value)
 	float dist_donz = sqrt(pow(pos_actor[0] - pos_donzo[0], 2) + pow(pos_actor[1] - pos_donzo[1], 2));
 	float dist_robber = sqrt(pow(pos_actor[0] - pos_robber[0], 2) + pow(pos_robber[1] - pos_robber[1], 2));
 
-	if (value) {
-		if (code == FY_SPACE) {
-			if (curPoseID == idleID) {
-				curPoseID = AttactID;
-				actor.SetCurrentAction(0, NULL, curPoseID, 5.0f);
-				actor.Play(START, 0.0f, FALSE, TRUE);
+	if (FyCheckHotKeyStatus(FY_SPACE)) {
+		if (curPoseID == idleID) {
 
-				//attact sucessful (close enough)
-				if (dist_donz < 50.0f) {
-					if (donzoblood > 0) {
-						donzoblood = AttactSys(donzoblood, 1);
-					}
-					else if (donzoblood == 0) {
-						curPoseID = Die2ID;
-						donzo.SetCurrentAction(0, NULL, curPoseID, 5.0f);
-						donzo.Play(START, 0.0f, FALSE, TRUE);
-					}
+			curPoseID = AttactID;
+			actor.SetCurrentAction(0, NULL, curPoseID, 5.0f);
+			actor.Play(START, 0.0f, FALSE, TRUE);
+
+			//attact sucessful (close enough)
+			if (dist_donz < 50.0f) {
+				if (donzoblood >= 0) {
+					donzoblood = AttactSys(donzoblood, 1);
+
+					curPose2ID = DamageLID;
+					donzo.SetCurrentAction(0, NULL, curPose2ID, 5.0f);
+					donzo.Play(ONCE, 0.0f, FALSE, TRUE);
+					curPose2ID = idle2ID;
+					donzo.SetCurrentAction(0, NULL, curPose2ID, 10.0f);
+					donzo.Play(START, 0.0f, FALSE, TRUE);
 
 				}
-				else if (dist_robber < 50.0f) {
+				else if (donzoblood < 0) {
+					curPose2ID = Die2ID;
+					donzo.SetCurrentAction(0, NULL, curPose2ID, 5.0f);
+					donzo.Play(ONCE, 0.0f, FALSE, TRUE);
+					curPose2ID = idle2ID;
+					donzo.SetCurrentAction(0, NULL, curPose2ID, 250.0f);
+					donzo.Play(START, 0.0f, FALSE, TRUE);
+				}
+
+			}
+			else if (dist_robber < 50.0f) {
+				robberblood = AttactSys(robberblood, 1);
+				if (robberblood >= 0) {
 					robberblood = AttactSys(robberblood, 1);
+					curPose3ID = DamageID;
+					robber.SetCurrentAction(0, NULL, curPose3ID, 5.0f);
+					robber.Play(ONCE, 0.0f, FALSE, TRUE);
+
+					curPose3ID = idle3ID;
+					robber.SetCurrentAction(0, NULL, curPose3ID, 10.0f);
+					robber.Play(START, 0.0f, FALSE, TRUE);
+
+				}
+				else if (robberblood < 0) {
+					curPose3ID = Die3ID;
+					robber.SetCurrentAction(0, NULL, curPose3ID, 5.0f);
+					robber.Play(ONCE, 0.0f, FALSE, TRUE);
+
+					curPose3ID = idle3ID;
+					robber.SetCurrentAction(0, NULL, curPose3ID, 10.0f);
+					robber.Play(START, 0.0f, FALSE, TRUE);
 				}
 			}
+
 		}
 	}
 	else {
@@ -710,22 +745,16 @@ void Attact(BYTE code, BOOL4 value)
 
 	}
 
+
 }
 float AttactSys(float blood, int attactType) {
-	if (blood > 0) {
-		// live
-		if (attactType == 1) {
-			blood -= 5;
-		}
-		else {
-			blood -= 10;
-		}
+	// live
+	if (attactType == 1) {
+		blood -= 5;
 	}
 	else {
-		// die
-		blood = 0;
+		blood -= 10;
 	}
-
 	return blood;
 }
 /*------------------
