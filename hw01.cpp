@@ -15,13 +15,14 @@ Last Updated : 1004, 2015, Kevin C. Wang
 #include "FlyWin32.h"
 #include <cmath>
 
-
 VIEWPORTid vID;                 // the major viewport
 SCENEid sID;                    // the 3D scene
 OBJECTid cID, tID;              // the main camera and the terrain for terrain following
+//********************************************************************
 CHARACTERid actorID, donzoID, robberID;            // the major character
 ACTIONid idleID, runID, curPoseID, walkID, idle2ID, run2ID,
-curPose2ID, walk2ID, idle3ID, run3ID, curPose3ID, walk3ID, DieID, Die2ID, Die3ID, AttactID, DamageLID, DamageID;
+curPose2ID, walk2ID, idle3ID, run3ID, curPose3ID, walk3ID, DieID, Die2ID, Die3ID, AttactID, DamageLID, DamageID, StandID, Stand2ID;
+//********************************************************************
 ROOMid terrainRoomID = FAILED_ID;
 TEXTid textID = FAILED_ID;
 
@@ -31,16 +32,22 @@ float constant_distant;
 int oldX, oldY, oldXM, oldYM, oldXMM, oldYMM;
 float judge_dir = 0;
 float adjust = 2.0f;
+
+//********************************************************************
 float donzoblood = 10.0f;
 float robberblood = 20.0f;
+//********************************************************************
 
 // hotkey callbacks
 void QuitGame(BYTE, BOOL4);
 void Movement(BYTE, BOOL4);
 void Movement2(BYTE, BOOL4);
-void Attact(BYTE, BOOL4);
 
+//********************************************************************
+void Attact(BYTE, BOOL4);
 float AttactSys(float, int);
+//********************************************************************
+
 // timer callbacks
 void GameAI(int);
 void RenderIt(int);
@@ -100,6 +107,7 @@ void FyMain(int argc, char **argv)
 	FySetTexturePath("Data\\NTU6\\Characters");
 	FySetCharacterPath("Data\\NTU6\\Characters");
 	actorID = scene.LoadCharacter("Lyubu2");
+	//********************************************************************
 	donzoID = scene.LoadCharacter("Donzo2");
 	robberID = scene.LoadCharacter("Robber02");
 
@@ -112,10 +120,12 @@ void FyMain(int argc, char **argv)
 	pos[0] = 3569.0f; pos[1] = -3208.0f; pos[2] = 1000.0f;
 	fDir[0] = -0.983f; fDir[1] = -0.143f; fDir[2] = 0.0f;
 	uDir[0] = 0.0f; uDir[1] = 0.0f; uDir[2] = 1.0f;
+	
 	pos2[0] = 3500.0f; pos2[1] = -3150.0f; pos2[2] = 1000.0f;
 	fDir2[0] = -0.983f; fDir2[1] = -0.143f; fDir2[2] = 0.0f;
 	uDir2[0] = 0.0f; uDir2[1] = 0.0f; uDir2[2] = 1.0f;
-	pos3[0] = 3600.0f; pos3[1] = -3250.0f; pos3[2] = 1000.0f;
+	
+	pos3[0] = 3800.0f; pos3[1] = -3650.0f; pos3[2] = 100.0f;
 	fDir3[0] = -0.983f; fDir3[1] = -0.143f; fDir3[2] = 0.0f;
 	uDir3[0] = 0.0f; uDir3[1] = 0.0f; uDir3[2] = 1.0f;
 	actor.SetDirection(fDir, uDir);
@@ -128,7 +138,7 @@ void FyMain(int argc, char **argv)
 	beOK = actor.PutOnTerrain(pos);
 	beOK = donzo.PutOnTerrain(pos2);
 	beOK = robber.PutOnTerrain(pos3);
-
+	
 	// Get two character actions pre-defined at Lyubu2
 	idleID = actor.GetBodyAction(NULL, "Idle");
 	runID = actor.GetBodyAction(NULL, "Run");
@@ -141,17 +151,19 @@ void FyMain(int argc, char **argv)
 	walk2ID = donzo.GetBodyAction(NULL, "Walk");
 	Die2ID = donzo.GetBodyAction(NULL, "Die");
 	DamageLID = donzo.GetBodyAction(NULL, "DamageL");
+	StandID = donzo.GetBodyAction(NULL, "Lie");
 
-	idle3ID = robber.GetBodyAction(NULL, "Idle");
+	idle3ID = robber.GetBodyAction(NULL, "CombatIdle");
 	run3ID = robber.GetBodyAction(NULL, "Run");
 	walk3ID = robber.GetBodyAction(NULL, "Walk");
 	Die3ID = robber.GetBodyAction(NULL, "Die");
 	DamageID = robber.GetBodyAction(NULL, "Damage1");
+	Stand2ID = robber.GetBodyAction(NULL, "Lie");
 
 	// set the character to idle action
 	curPoseID = idleID;
 	curPose2ID = idle2ID;
-	curPose3ID = Die3ID;
+	curPose3ID = idle3ID;
 	actor.SetCurrentAction(NULL, 0, curPoseID);
 	actor.Play(START, 0.0f, FALSE, TRUE);
 	actor.TurnRight(90.0f);
@@ -161,6 +173,7 @@ void FyMain(int argc, char **argv)
 	robber.SetCurrentAction(NULL, 0, curPose3ID);
 	robber.Play(START, 0.0f, FALSE, TRUE);
 	robber.TurnRight(90.0f);
+	//********************************************************************
 
 	// translate the camera
 	cID = scene.CreateObject(CAMERA);
@@ -248,22 +261,26 @@ void GameAI(int skip)
 	// play character pose
 	actor.ID(actorID);
 	actor.Play(LOOP, (float)skip, FALSE, TRUE);
+	//********************************************************************
 	donzo.ID(donzoID);
 	donzo.Play(LOOP, (float)skip, FALSE, TRUE);
 	robber.ID(robberID);
 	robber.Play(LOOP, (float)skip, FALSE, TRUE);
-
+	//********************************************************************
 	//direction
 	float pos_actor[3], actor_fDir[3], actor_uDir[3];
 	actor.GetPosition(pos_actor);
+	//********************************************************************
 	donzo.GetPosition(pos_actor);
 	robber.GetPosition(pos_actor);
-
+	//********************************************************************
 	float pos_camera[3], camera_fDir[3], camera_uDir[3];
 	camera.GetPosition(pos_camera);
 	actor.GetDirection(actor_fDir, actor_uDir);
+	//********************************************************************
 	donzo.GetDirection(actor_fDir, actor_uDir);
 	robber.GetDirection(actor_fDir, actor_uDir);
+	//********************************************************************
 
 	float unit = sqrt(pow(actor_fDir[0], 2) + pow(actor_fDir[1], 2));
 	float dist = 6.0f;
@@ -506,10 +523,10 @@ void RenderIt(int skip)
 	actor.GetPosition(pos_actor);
 	donzo.GetPosition(pos_donzo);
 	robber.GetPosition(pos_robber);
-
+	//********************************************************************
 	float dist_donz = sqrt(pow(pos_actor[0] - pos_donzo[0], 2) + pow(pos_actor[1] - pos_donzo[1], 2));
 	float dist_robber = sqrt(pow(pos_actor[0] - pos_robber[0], 2) + pow(pos_robber[1] - pos_robber[1], 2));
-
+	//********************************************************************
 
 
 	FnText text;
@@ -522,14 +539,17 @@ void RenderIt(int skip)
 	sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
 	sprintf(fDirS, "facing: %8.3f %8.3f %8.3f", fDir[0], fDir[1], fDir[2]);
 	sprintf(uDirS, "up: %8.3f %8.3f %8.3f", uDir[0], uDir[1], uDir[2]);
+	//********************************************************************
 	sprintf(db, "Donzo Blood: %8.3f ", donzoblood);
 	sprintf(dist_donzS, "Donzo Dist: %8.3f ", dist_donz);
-
+	//********************************************************************
 	text.Write(posS, 20, 35, 255, 255, 0);
 	text.Write(fDirS, 20, 50, 255, 255, 0);
 	text.Write(uDirS, 20, 65, 255, 255, 0);
 	text.Write(db, 20, 80, 255, 255, 0);
+	//********************************************************************
 	text.Write(dist_donzS, 20, 95, 255, 255, 0);
+	//********************************************************************
 
 	text.End();
 
@@ -666,7 +686,7 @@ void Movement2(BYTE code, BOOL4 value)
 	}
 }
 
-
+//********************************************************************
 void Attact(BYTE code, BOOL4 value)
 {
 	FnCharacter actor, donzo, robber;
@@ -690,7 +710,7 @@ void Attact(BYTE code, BOOL4 value)
 			actor.Play(START, 0.0f, FALSE, TRUE);
 
 			//attact sucessful (close enough)
-			if (dist_donz < 50.0f) {
+			if (dist_donz < 100.0f) {
 				if (donzoblood >= 0) {
 					donzoblood = AttactSys(donzoblood, 1);
 
@@ -706,13 +726,15 @@ void Attact(BYTE code, BOOL4 value)
 					curPose2ID = Die2ID;
 					donzo.SetCurrentAction(0, NULL, curPose2ID, 5.0f);
 					donzo.Play(ONCE, 0.0f, FALSE, TRUE);
+					//donzo.Show(FALSE, FALSE, FALSE, FALSE);
 					curPose2ID = idle2ID;
 					donzo.SetCurrentAction(0, NULL, curPose2ID, 250.0f);
 					donzo.Play(START, 0.0f, FALSE, TRUE);
+
 				}
 
 			}
-			else if (dist_robber < 50.0f) {
+			else if (dist_robber < 100.0f) {
 				robberblood = AttactSys(robberblood, 1);
 				if (robberblood >= 0) {
 					robberblood = AttactSys(robberblood, 1);
@@ -720,18 +742,13 @@ void Attact(BYTE code, BOOL4 value)
 					robber.SetCurrentAction(0, NULL, curPose3ID, 5.0f);
 					robber.Play(ONCE, 0.0f, FALSE, TRUE);
 
-					curPose3ID = idle3ID;
-					robber.SetCurrentAction(0, NULL, curPose3ID, 10.0f);
-					robber.Play(START, 0.0f, FALSE, TRUE);
-
 				}
 				else if (robberblood < 0) {
 					curPose3ID = Die3ID;
 					robber.SetCurrentAction(0, NULL, curPose3ID, 5.0f);
-					robber.Play(ONCE, 0.0f, FALSE, TRUE);
-
-					curPose3ID = idle3ID;
-					robber.SetCurrentAction(0, NULL, curPose3ID, 10.0f);
+					robber.Play(START, 0.0f, FALSE, TRUE);
+					curPose3ID = Stand2ID;
+					robber.SetCurrentAction(0, NULL, curPose3ID, 30.0f);
 					robber.Play(START, 0.0f, FALSE, TRUE);
 				}
 			}
@@ -740,15 +757,13 @@ void Attact(BYTE code, BOOL4 value)
 	}
 	else {
 		curPoseID = idleID;
-		actor.SetCurrentAction(0, NULL, curPoseID, 5.0f);
+		actor.SetCurrentAction(0, NULL, curPoseID, 30.0f);
 		actor.Play(START, 0.0f, FALSE, TRUE);
-
 	}
 
 
 }
 float AttactSys(float blood, int attactType) {
-	// live
 	if (attactType == 1) {
 		blood -= 5;
 	}
@@ -757,6 +772,8 @@ float AttactSys(float blood, int attactType) {
 	}
 	return blood;
 }
+//********************************************************************
+
 /*------------------
 quit the demo
 C.Wang 0327, 2005
