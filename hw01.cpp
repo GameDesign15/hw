@@ -492,22 +492,41 @@ void RenderIt(int skip)
 		frame = 0;
 	}
 
+
+
+	FnCharacter actor, donzo, robber;
+	actor.ID(actorID);
+	donzo.ID(donzoID);
+	robber.ID(robberID);
+
+	float pos_actor[3], pos_donzo[3], pos_robber[3];
+	actor.GetPosition(pos_actor);
+	donzo.GetPosition(pos_donzo);
+	robber.GetPosition(pos_robber);
+
+	float dist_donz = sqrt(pow(pos_actor[0] - pos_donzo[0], 2) + pow(pos_actor[1] - pos_donzo[1], 2));
+	float dist_robber = sqrt(pow(pos_actor[0] - pos_robber[0], 2) + pow(pos_robber[1] - pos_robber[1], 2));
+
+
+
 	FnText text;
 	text.ID(textID);
 
 	text.Begin(vID);
 	text.Write(string, 20, 20, 255, 0, 0);
 
-	char posS[256], fDirS[256], uDirS[256], db[256];
+	char posS[256], fDirS[256], uDirS[256], db[256], dist_donzS[256];
 	sprintf(posS, "pos: %8.3f %8.3f %8.3f", pos[0], pos[1], pos[2]);
 	sprintf(fDirS, "facing: %8.3f %8.3f %8.3f", fDir[0], fDir[1], fDir[2]);
 	sprintf(uDirS, "up: %8.3f %8.3f %8.3f", uDir[0], uDir[1], uDir[2]);
 	sprintf(db, "Donzo Blood: %8.3f ", donzoblood);
+	sprintf(dist_donzS, "Donzo Dist: %8.3f ", dist_donz);
 
 	text.Write(posS, 20, 35, 255, 255, 0);
 	text.Write(fDirS, 20, 50, 255, 255, 0);
 	text.Write(uDirS, 20, 65, 255, 255, 0);
 	text.Write(db, 20, 80, 255, 255, 0);
+	text.Write(dist_donzS, 20, 95, 255, 255, 0);
 
 	text.End();
 
@@ -667,18 +686,18 @@ void Attact(BYTE code, BOOL4 value)
 				actor.Play(START, 0.0f, FALSE, TRUE);
 
 				//attact sucessful (close enough)
-				if (dist_donz < 5.0f) {
+				if (dist_donz < 50.0f) {
 					if (donzoblood > 0) {
 						donzoblood = AttactSys(donzoblood, 1);
 					}
 					else if (donzoblood == 0) {
 						curPoseID = Die2ID;
-						actor.SetCurrentAction(0, NULL, curPoseID, 5.0f);
-						actor.Play(START, 0.0f, FALSE, TRUE);
+						donzo.SetCurrentAction(0, NULL, curPoseID, 5.0f);
+						donzo.Play(START, 0.0f, FALSE, TRUE);
 					}
 
 				}
-				else if (dist_robber < 5.0f) {
+				else if (dist_robber < 50.0f) {
 					robberblood = AttactSys(robberblood, 1);
 				}
 			}
@@ -688,6 +707,7 @@ void Attact(BYTE code, BOOL4 value)
 		curPoseID = idleID;
 		actor.SetCurrentAction(0, NULL, curPoseID, 5.0f);
 		actor.Play(START, 0.0f, FALSE, TRUE);
+
 	}
 
 }
